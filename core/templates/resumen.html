@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>La Tiendita - Registro de ventas</title>
+    <style>
+        body {
+            font-family: Arial, Helvetica, sans-serif;
+            max-width: 900px;
+            margin: 30px auto;
+            padding: 0 16px;
+            background: #f7f5f0;
+            color: #2b2b2b;
+        }
+        h1 { color: #3a6b35; margin-bottom: 0; }
+        .subtitulo { color: #666; margin-top: 4px; margin-bottom: 24px; }
+        form {
+            background: #fff;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            padding: 16px;
+            margin-bottom: 28px;
+        }
+        label { display: block; margin-top: 10px; font-weight: bold; }
+        input, select {
+            width: 100%;
+            padding: 8px;
+            margin-top: 4px;
+            box-sizing: border-box;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+        button {
+            margin-top: 14px;
+            background: #3a6b35;
+            color: #fff;
+            border: none;
+            padding: 10px 18px;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 30px;
+            background: #fff;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 8px 10px;
+            text-align: left;
+            font-size: 14px;
+        }
+        th { background: #3a6b35; color: #fff; }
+        tr.aceptado { background: #eaf7e8; }
+        tr.rechazado { background: #fdeaea; }
+        tr.invalido { background: #fdf6df; }
+        h2 { color: #3a6b35; }
+    </style>
+</head>
+<body>
+    <h1>La Tiendita</h1>
+    <p class="subtitulo">Registro de ventas del almacen saludable</p>
+
+    <form method="post">
+        {% csrf_token %}
+        <label for="producto">Producto</label>
+        <input list="lista-productos" id="producto" name="producto" placeholder="Ej: Kombucha" required>
+        <datalist id="lista-productos">
+            {% for item in catalogo %}
+            <option value="{{ item.producto }}"></option>
+            {% endfor %}
+        </datalist>
+
+        <label for="cantidad">Cantidad</label>
+        <input type="number" id="cantidad" name="cantidad" placeholder="Ej: 2" required>
+
+        <button type="submit">Registrar venta</button>
+    </form>
+
+    <h2>Catalogo</h2>
+    <table>
+        <tr>
+            <th>Producto</th>
+            <th>Precio</th>
+            <th>Stock</th>
+        </tr>
+        {% for item in catalogo %}
+        <tr>
+            <td>{{ item.producto }}</td>
+            <td>${{ item.precio }}</td>
+            <td>{{ item.stock }}</td>
+        </tr>
+        {% endfor %}
+    </table>
+
+    <h2>Registros de venta</h2>
+    {% if registros %}
+    <table>
+        <tr>
+            <th>Producto</th>
+            <th>Cantidad</th>
+            <th>Estado</th>
+            <th>Motivo</th>
+            <th>Total</th>
+        </tr>
+        {% for r in registros %}
+        <tr class="{% if r.estado == 'Aceptado' %}aceptado{% elif r.estado == 'Rechazado' %}rechazado{% else %}invalido{% endif %}">
+            <td>{{ r.producto }}</td>
+            <td>{{ r.cantidad }}</td>
+            <td>{{ r.estado }}</td>
+            <td>{{ r.motivo }}</td>
+            <td>{% if r.total %}${{ r.total }}{% else %}-{% endif %}</td>
+        </tr>
+        {% endfor %}
+    </table>
+    {% else %}
+    <p>Todavia no hay registros. datos.json se crea con la primera venta.</p>
+    {% endif %}
+</body>
+</html>

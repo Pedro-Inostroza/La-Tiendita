@@ -1,0 +1,51 @@
+[
+  {
+    "producto": "Kombucha",
+    "cantidad": 2,
+    "estado": "Aceptado",
+    "motivo": "Venta realizada, quedan 18 en stock",
+    "total": 5000
+  },
+  {
+    "producto": "Chocolate importado",
+    "cantidad": 1,
+    "estado": "Rechazado",
+    "motivo": "El producto no existe en el catalogo",
+    "total": 0
+  },
+  {
+    "producto": "Ghee manare",
+    "cantidad": 50,
+    "estado": "Rechazado",
+    "motivo": "Stock insuficiente (quedan 5)",
+    "total": 0
+  },
+  {
+    "producto": "Miel 1kg",
+    "cantidad": 0,
+    "estado": "Dato invalido",
+    "motivo": "La cantidad debe ser mayor a cero",
+    "total": 0
+  },
+  {
+    "producto": "Aceite de coco",
+    "cantidad": 1,
+    "estado": "Aceptado",
+    "motivo": "Venta realizada, quedan 9 en stock",
+    "total": 4990
+  },
+  {
+    "producto": "Extra life",
+    "cantidad": 20,
+    "estado": "Rechazado",
+    "motivo": "Stock insuficiente (quedan 16)",
+    "total": 0
+  },
+  {
+    "producto": "Vitamin water",
+    "cantidad": 3,
+    "estado": "Aceptado",
+    "motivo": "Venta realizada, quedan 7 en stock",
+    "total": 6300
+  }
+]
