@@ -21,6 +21,10 @@
             padding: 16px;
             margin-bottom: 28px;
         }
+        .paneles { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px; }
+        .paneles form { margin-bottom: 0; }
+        .acciones { margin-bottom: 28px; }
+        .nota { color: #666; font-size: 13px; margin-bottom: 0; }
         label { display: block; margin-top: 10px; font-weight: bold; }
         input, select {
             width: 100%;
@@ -77,6 +81,42 @@
 
         <button type="submit">Registrar venta</button>
     </form>
+
+    <section class="acciones">
+        <h2>Administrar inventario</h2>
+        <div class="paneles">
+            <form method="post">
+                {% csrf_token %}
+                <input type="hidden" name="accion" value="editar_producto">
+                <h3>Modificar precio o stock</h3>
+                <label for="producto-editar">Producto</label>
+                <select id="producto-editar" name="producto" required>
+                    {% for item in catalogo %}
+                    <option value="{{ item.producto }}">{{ item.producto }}</option>
+                    {% endfor %}
+                </select>
+                <label for="precio">Nuevo precio</label>
+                <input type="number" id="precio" name="precio" min="0" required>
+                <label for="stock">Nuevo stock</label>
+                <input type="number" id="stock" name="stock" min="0" required>
+                <button type="submit">Guardar cambios</button>
+            </form>
+
+            <form method="post">
+                {% csrf_token %}
+                <input type="hidden" name="accion" value="agregar_producto">
+                <h3>Agregar producto</h3>
+                <label for="nuevo-producto">Nombre</label>
+                <input id="nuevo-producto" name="nuevo_producto" required>
+                <label for="nuevo-precio">Precio</label>
+                <input type="number" id="nuevo-precio" name="nuevo_precio" min="0" required>
+                <label for="nuevo-stock">Stock inicial</label>
+                <input type="number" id="nuevo-stock" name="nuevo_stock" min="0" required>
+                <button type="submit">Agregar producto</button>
+                <p class="nota">El nombre debe ser distinto a uno ya existente.</p>
+            </form>
+        </div>
+    </section>
 
     <h2>Catalogo</h2>
     <table>

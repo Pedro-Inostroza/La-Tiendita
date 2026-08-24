@@ -23,10 +23,12 @@ Este archivo se usa de dos formas:
 
 import json
 import os
+from copy import deepcopy
 from tabulate import tabulate
 
 # Ruta de datos.json: siempre junto a este archivo (junto a manage.py)
 RUTA_DATOS = os.path.join(os.path.dirname(os.path.abspath(__file__)), "datos.json")
+RUTA_CATALOGO = os.path.join(os.path.dirname(os.path.abspath(__file__)), "catalogo.json")
 
 # Catalogo de La Tiendita: nombre -> precio (CLP) y stock disponible.
 # El stock inicial es un supuesto razonable para la version de prueba
@@ -58,6 +60,20 @@ CATALOGO = {
     "Moroketo ketofree": {"precio": 2790, "stock": 22},
     "Berrysur batido": {"precio": 3000, "stock": 17},
 }
+
+
+def cargar_catalogo():
+    """Carga el catálogo editable o entrega una copia del catálogo inicial."""
+    if os.path.exists(RUTA_CATALOGO):
+        with open(RUTA_CATALOGO, "r", encoding="utf-8") as f:
+            return json.load(f)
+    return deepcopy(CATALOGO)
+
+
+def guardar_catalogo(catalogo):
+    """Guarda los cambios de productos, precios y stock."""
+    with open(RUTA_CATALOGO, "w", encoding="utf-8") as f:
+        json.dump(catalogo, f, indent=2, ensure_ascii=False)
 
 
 def decidir_venta(producto, cantidad, catalogo):
@@ -138,7 +154,10 @@ def main():
     except ValueError:
         cantidad = -1
 
-    resultado = decidir_venta(producto, cantidad, CATALOGO)
+    catalogo = cargar_catalogo()
+    resultado = decidir_venta(producto, cantidad, catalogo)
+    if resultado["estado"] == "Aceptado":
+        guardar_catalogo(catalogo)
 
     print(f"\nResultado: {resultado['estado']}")
     print(f"Motivo: {resultado['motivo']}")

@@ -11,7 +11,12 @@ BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 if BASE_DIR not in sys.path:
     sys.path.append(BASE_DIR)
 
-from solucion import CATALOGO, decidir_venta, RUTA_DATOS  # noqa: E402
+from solucion import (  # noqa: E402
+    RUTA_DATOS,
+    cargar_catalogo,
+    decidir_venta,
+    guardar_catalogo,
+)
 
 
 def resumen(request):
@@ -27,6 +32,35 @@ def resumen(request):
       vacia (sin registros).
     """
     if request.method == "POST":
+        accion = request.POST.get("accion", "venta")
+        catalogo = cargar_catalogo()
+
+        if accion == "editar_producto":
+            producto = request.POST.get("producto", "")
+            try:
+                precio = int(request.POST.get("precio", ""))
+                stock = int(request.POST.get("stock", ""))
+            except ValueError:
+                return redirect("resumen")
+
+            if producto in catalogo and precio >= 0 and stock >= 0:
+                catalogo[producto] = {"precio": precio, "stock": stock}
+                guardar_catalogo(catalogo)
+            return redirect("resumen")
+
+        if accion == "agregar_producto":
+            producto = request.POST.get("nuevo_producto", "").strip()
+            try:
+                precio = int(request.POST.get("nuevo_precio", ""))
+                stock = int(request.POST.get("nuevo_stock", ""))
+            except ValueError:
+                return redirect("resumen")
+
+            if producto and producto not in catalogo and precio >= 0 and stock >= 0:
+                catalogo[producto] = {"precio": precio, "stock": stock}
+                guardar_catalogo(catalogo)
+            return redirect("resumen")
+
         producto = request.POST.get("producto", "").strip()
         cantidad_texto = request.POST.get("cantidad", "").strip()
 
@@ -35,7 +69,9 @@ def resumen(request):
         except ValueError:
             cantidad = -1
 
-        resultado = decidir_venta(producto, cantidad, CATALOGO)
+        resultado = decidir_venta(producto, cantidad, catalogo)
+        if resultado["estado"] == "Aceptado":
+            guardar_catalogo(catalogo)
 
         registros = []
         if os.path.exists(RUTA_DATOS):
@@ -53,9 +89,10 @@ def resumen(request):
         with open(RUTA_DATOS) as f:
             registros = json.load(f)
 
+    catalogo = cargar_catalogo()
     catalogo_lista = [
         {"producto": nombre, "precio": datos["precio"], "stock": datos["stock"]}
-        for nombre, datos in CATALOGO.items()
+        for nombre, datos in catalogo.items()
     ]
 
     return render(
