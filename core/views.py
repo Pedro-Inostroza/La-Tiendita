@@ -61,6 +61,13 @@ def resumen(request):
                 guardar_catalogo(catalogo)
             return redirect("resumen")
 
+        if accion == "eliminar_producto":
+            producto = request.POST.get("producto", "")
+            if producto in catalogo:
+                del catalogo[producto]
+                guardar_catalogo(catalogo)
+            return redirect("resumen")
+
         producto = request.POST.get("producto", "").strip()
         cantidad_texto = request.POST.get("cantidad", "").strip()
 

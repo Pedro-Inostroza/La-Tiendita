@@ -40,3 +40,17 @@ class ResumenTests(TestCase):
         self.assertRedirects(response, "/")
         self.assertEqual(self.catalogo["Kombucha"], {"precio": 2900, "stock": 30})
         guardar_catalogo.assert_called_once_with(self.catalogo)
+
+    @patch("core.views.guardar_catalogo")
+    @patch("core.views.cargar_catalogo")
+    def test_eliminar_producto(self, cargar_catalogo, guardar_catalogo):
+        cargar_catalogo.return_value = self.catalogo
+
+        response = self.client.post("/", {
+            "accion": "eliminar_producto",
+            "producto": "Kombucha",
+        })
+
+        self.assertRedirects(response, "/")
+        self.assertNotIn("Kombucha", self.catalogo)
+        guardar_catalogo.assert_called_once_with(self.catalogo)

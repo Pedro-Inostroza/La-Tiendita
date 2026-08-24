@@ -25,6 +25,7 @@
         .paneles form { margin-bottom: 0; }
         .acciones { margin-bottom: 28px; }
         .nota { color: #666; font-size: 13px; margin-bottom: 0; }
+        .peligro { background: #a83232; }
         label { display: block; margin-top: 10px; font-weight: bold; }
         input, select {
             width: 100%;
@@ -114,6 +115,20 @@
                 <input type="number" id="nuevo-stock" name="nuevo_stock" min="0" required>
                 <button type="submit">Agregar producto</button>
                 <p class="nota">El nombre debe ser distinto a uno ya existente.</p>
+            </form>
+
+            <form method="post" onsubmit="return confirm('¿Eliminar este producto del inventario? Esta acción no se puede deshacer.');">
+                {% csrf_token %}
+                <input type="hidden" name="accion" value="eliminar_producto">
+                <h3>Eliminar producto</h3>
+                <label for="producto-eliminar">Producto</label>
+                <select id="producto-eliminar" name="producto" required>
+                    {% for item in catalogo %}
+                    <option value="{{ item.producto }}">{{ item.producto }}</option>
+                    {% endfor %}
+                </select>
+                <button class="peligro" type="submit">Eliminar producto</button>
+                <p class="nota">Los registros de ventas anteriores se conservan.</p>
             </form>
         </div>
     </section>
