@@ -8,7 +8,7 @@ Django antes de programarlo a mano.
 Le pedi lo siguiente, siguiendo el formato sugerido en las
 instrucciones de la evaluacion:
 
-> "Soy estudiante de programacion back end, primer semestre. Quiero
+> "Soy estudiante de programacion back end. Quiero
 > resolver este problema: un almacen de alimentacion saludable
 > llamado La Tiendita no tiene sistema para registrar ventas ni
 > stock, y el vendedor no sabe si queda stock cuando alguien compra.

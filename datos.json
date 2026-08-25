@@ -47,5 +47,26 @@
     "estado": "Aceptado",
     "motivo": "Venta realizada, quedan 7 en stock",
     "total": 6300
+  },
+  {
+    "producto": "Avena instantanea",
+    "cantidad": 3,
+    "estado": "Aceptado",
+    "motivo": "Venta realizada, quedan 11 en stock",
+    "total": 17370
+  },
+  {
+    "producto": "Brownie Kinki",
+    "cantidad": 5,
+    "estado": "Aceptado",
+    "motivo": "Venta realizada, quedan 24 en stock",
+    "total": 14500
+  },
+  {
+    "producto": "Ghee manare",
+    "cantidad": 2,
+    "estado": "Aceptado",
+    "motivo": "Venta realizada, quedan 3 en stock",
+    "total": 29980
   }
 ]

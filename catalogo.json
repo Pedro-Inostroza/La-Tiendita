@@ -1,0 +1,106 @@
+{
+  "Kombucha": {
+    "precio": 2500,
+    "stock": 25
+  },
+  "Electrolit": {
+    "precio": 3000,
+    "stock": 15
+  },
+  "Agua de coco 500ml": {
+    "precio": 3000,
+    "stock": 18
+  },
+  "Agua de coco 330ml": {
+    "precio": 2500,
+    "stock": 18
+  },
+  "Agua 1.5 litros": {
+    "precio": 2000,
+    "stock": 30
+  },
+  "Jugo bless": {
+    "precio": 2500,
+    "stock": 12
+  },
+  "Vitamin water": {
+    "precio": 2100,
+    "stock": 10
+  },
+  "Barritas gudfud": {
+    "precio": 3000,
+    "stock": 25
+  },
+  "Sal Rosada Manare": {
+    "precio": 4290,
+    "stock": 8
+  },
+  "Mantequilla de almendras": {
+    "precio": 8990,
+    "stock": 6
+  },
+  "Ghee manare": {
+    "precio": 14990,
+    "stock": 3
+  },
+  "Cereal manare": {
+    "precio": 1000,
+    "stock": 40
+  },
+  "Avena instantanea": {
+    "precio": 5790,
+    "stock": 14
+  },
+  "Aceite de coco": {
+    "precio": 4990,
+    "stock": 10
+  },
+  "Bandeja 30 huevos": {
+    "precio": 12000,
+    "stock": 9
+  },
+  "Extra life": {
+    "precio": 2000,
+    "stock": 16
+  },
+  "Arriendo mat": {
+    "precio": 2500,
+    "stock": 4
+  },
+  "Miel 1kg": {
+    "precio": 12000,
+    "stock": 7
+  },
+  "Keto crunch": {
+    "precio": 4000,
+    "stock": 11
+  },
+  "Premium mix": {
+    "precio": 3500,
+    "stock": 13
+  },
+  "Alfajor ketofree": {
+    "precio": 3900,
+    "stock": 20
+  },
+  "Volkis ketofree": {
+    "precio": 3890,
+    "stock": 20
+  },
+  "Galleton ketofree": {
+    "precio": 2900,
+    "stock": 22
+  },
+  "Moroketo ketofree": {
+    "precio": 2790,
+    "stock": 22
+  },
+  "Berrysur batido": {
+    "precio": 3000,
+    "stock": 17
+  },
+  "Brownie Kinki": {
+    "precio": 2900,
+    "stock": 24
+  }
+}
