@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{% block title %}La Tiendita{% endblock %}</title>
+    <style>
+        :root { --verde: #23603a; --claro: #f4f7f2; --borde: #dce4da; }
+        * { box-sizing: border-box; } body { margin: 0; font-family: Arial, sans-serif; background: var(--claro); color: #243025; }
+        nav { background: var(--verde); color: #fff; padding: 14px max(20px, calc((100% - 1100px)/2)); display: flex; align-items: center; gap: 18px; }
+        nav a { color: #fff; text-decoration: none; } nav .marca { font-size: 20px; font-weight: bold; margin-right: auto; }
+        main { max-width: 1100px; margin: 32px auto; padding: 0 20px; } h1 { margin-top: 0; } .card { background: #fff; padding: 22px; border: 1px solid var(--borde); border-radius: 10px; margin-bottom: 18px; }
+        .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 16px; } .metric { font-size: 30px; font-weight: bold; color: var(--verde); }
+        label { display: block; margin: 12px 0 5px; font-weight: bold; } input, select { width: 100%; padding: 9px; border: 1px solid #b9c5b7; border-radius: 5px; }
+        button, .boton { display: inline-block; margin-top: 16px; background: var(--verde); color: #fff; border: 0; border-radius: 5px; padding: 10px 14px; text-decoration: none; cursor: pointer; }
+        .peligro { background: #a42c2c; } table { width: 100%; border-collapse: collapse; } th, td { padding: 10px; border-bottom: 1px solid var(--borde); text-align: left; }
+        .mensaje { background: #e3f3e5; border: 1px solid #a9d7b0; padding: 12px; border-radius: 6px; margin-bottom: 16px; } .errores { color: #a42c2c; } .acciones a { margin-right: 10px; }
+    </style>
+</head>
+<body>
+    {% if user.is_authenticated %}
+    <nav><a class="marca" href="{% url 'dashboard' %}">La Tiendita</a><a href="{% url 'dashboard' %}">Dashboard</a><a href="{% url 'ventas:lista' %}">Ventas</a>{% if es_administrador %}<a href="{% url 'inventario:lista' %}">Inventario</a>{% endif %}<span>{{ user.username }}</span><form method="post" action="{% url 'logout' %}">{% csrf_token %}<button type="submit">Salir</button></form></nav>
+    {% endif %}
+    <main>{% for message in messages %}<div class="mensaje">{{ message }}</div>{% endfor %}{% block content %}{% endblock %}</main>
+</body>
+</html>

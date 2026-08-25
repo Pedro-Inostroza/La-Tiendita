@@ -1,0 +1,3 @@
+{% extends 'base.html' %}
+{% block title %}Dashboard | La Tiendita{% endblock %}
+{% block content %}<h1>Dashboard</h1><p>Resumen de tu operación.</p><div class="grid"><div class="card"><small>Productos</small><div class="metric">{{ total_productos }}</div></div><div class="card"><small>Stock bajo (≤ 5)</small><div class="metric">{{ stock_bajo }}</div></div><div class="card"><small>Ventas de hoy</small><div class="metric">{{ ventas_hoy }}</div></div><div class="card"><small>Ingresos registrados</small><div class="metric">${{ ingresos }}</div></div></div><div class="card"><h2>Últimas ventas</h2>{% include 'ventas/tabla.html' with ventas=ultimas_ventas %}</div>{% endblock %}
