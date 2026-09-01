@@ -5,16 +5,42 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>{% block title %}La Tiendita{% endblock %}</title>
     <style>
-        :root { --verde: #23603a; --claro: #f4f7f2; --borde: #dce4da; }
-        * { box-sizing: border-box; } body { margin: 0; font-family: Arial, sans-serif; background: var(--claro); color: #243025; }
-        nav { background: var(--verde); color: #fff; padding: 14px max(20px, calc((100% - 1100px)/2)); display: flex; align-items: center; gap: 18px; }
-        nav a { color: #fff; text-decoration: none; } nav .marca { font-size: 20px; font-weight: bold; margin-right: auto; }
-        main { max-width: 1100px; margin: 32px auto; padding: 0 20px; } h1 { margin-top: 0; } .card { background: #fff; padding: 22px; border: 1px solid var(--borde); border-radius: 10px; margin-bottom: 18px; }
-        .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 16px; } .metric { font-size: 30px; font-weight: bold; color: var(--verde); } .descripcion, .analisis span { color: #5d6b5f; } .analisis { border-left: 3px solid #8ab894; padding-left: 12px; } .dato { font-size: 24px; font-weight: bold; color: var(--verde); margin: 6px 0; }
-        label { display: block; margin: 12px 0 5px; font-weight: bold; } input, select { width: 100%; padding: 9px; border: 1px solid #b9c5b7; border-radius: 5px; }
-        button, .boton { display: inline-block; margin-top: 16px; background: var(--verde); color: #fff; border: 0; border-radius: 5px; padding: 10px 14px; text-decoration: none; cursor: pointer; }
-        .peligro { background: #a42c2c; } table { width: 100%; border-collapse: collapse; } th, td { padding: 10px; border-bottom: 1px solid var(--borde); text-align: left; }
-        .mensaje { background: #e3f3e5; border: 1px solid #a9d7b0; padding: 12px; border-radius: 6px; margin-bottom: 16px; } .errores { color: #a42c2c; } .acciones a { margin-right: 10px; }
+        :root { --coral: #f37570; --coral-oscuro: #df625e; --fondo: #fff8f6; --superficie: #ffffff; --tinta: #353235; --muted: #776e70; --borde: #eadfdd; --sombra: 0 12px 30px rgba(71, 44, 43, .08); }
+        * { box-sizing: border-box; }
+        body { margin: 0; font-family: "Segoe UI", Arial, sans-serif; background: var(--fondo); color: var(--tinta); line-height: 1.5; }
+        nav { min-height: 94px; background: var(--superficie); border-bottom: 1px solid var(--borde); padding: 18px max(24px, calc((100% - 1180px) / 2)); display: flex; align-items: center; gap: 28px; box-shadow: 0 4px 14px rgba(71, 44, 43, .04); }
+        nav a { color: var(--tinta); text-decoration: none; font-weight: 600; transition: color .2s ease; }
+        nav a:hover { color: var(--coral); }
+        nav .marca { font-family: Georgia, "Times New Roman", serif; font-size: 27px; letter-spacing: .04em; margin-right: auto; }
+        nav span { color: var(--muted); font-size: 14px; padding: 7px 12px; background: #fff0ed; border-radius: 999px; }
+        nav form { margin: 0; }
+        main { max-width: 1180px; margin: 46px auto; padding: 0 24px; }
+        h1, h2 { font-family: Georgia, "Times New Roman", serif; color: var(--tinta); }
+        h1 { font-size: clamp(2rem, 4vw, 3rem); margin: 0 0 4px; letter-spacing: -.035em; }
+        h2 { margin-top: 0; font-size: 1.55rem; }
+        p { color: var(--muted); }
+        .card { background: var(--superficie); padding: 28px; border: 1px solid var(--borde); border-radius: 18px; margin-bottom: 22px; box-shadow: var(--sombra); }
+        .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 18px; }
+        .grid > .card { margin-bottom: 0; }
+        .metric { font-family: Georgia, "Times New Roman", serif; font-size: 2.25rem; font-weight: bold; color: var(--coral); line-height: 1.2; margin-top: 7px; }
+        small { color: var(--muted); font-weight: 700; letter-spacing: .035em; text-transform: uppercase; }
+        .descripcion, .analisis span { color: var(--muted); }
+        .analisis { border-left: 3px solid var(--coral); padding: 5px 0 5px 16px; }
+        .dato { font-family: Georgia, "Times New Roman", serif; font-size: 1.55rem; font-weight: bold; color: var(--tinta); margin: 7px 0; }
+        label { display: block; margin: 16px 0 6px; font-weight: 700; color: var(--tinta); }
+        input, select { width: 100%; padding: 12px 13px; border: 1px solid var(--borde); border-radius: 10px; background: #fffdfc; color: var(--tinta); font: inherit; }
+        input:focus, select:focus { outline: 3px solid rgba(243, 117, 112, .22); border-color: var(--coral); }
+        button, .boton { display: inline-block; margin-top: 18px; background: var(--coral); color: #fff; border: 0; border-radius: 999px; padding: 11px 20px; font: inherit; font-weight: 700; text-decoration: none; cursor: pointer; transition: background .2s ease, transform .2s ease; }
+        button:hover, .boton:hover { background: var(--coral-oscuro); transform: translateY(-1px); }
+        nav button { margin-top: 0; padding: 8px 14px; font-size: 14px; }
+        .peligro { background: #b94747; }
+        table { width: 100%; border-collapse: collapse; margin-top: 12px; }
+        th, td { padding: 13px 10px; border-bottom: 1px solid var(--borde); text-align: left; }
+        th { color: var(--muted); font-size: .76rem; letter-spacing: .06em; text-transform: uppercase; }
+        tr:last-child td { border-bottom: 0; }
+        .mensaje { background: #fff0ed; border: 1px solid #f5c7c1; color: var(--tinta); padding: 13px 16px; border-radius: 12px; margin-bottom: 20px; }
+        .errores { color: #b94747; margin-top: 5px; } .acciones a { color: var(--coral-oscuro); font-weight: 700; margin-right: 12px; text-decoration: none; }
+        @media (max-width: 760px) { nav { min-height: auto; flex-wrap: wrap; gap: 14px 20px; } nav .marca { width: 100%; } nav span { margin-left: auto; } main { margin: 30px auto; padding: 0 16px; } .card { padding: 21px; } table { font-size: .88rem; } th, td { padding: 10px 6px; } }
     </style>
 </head>
 <body>
