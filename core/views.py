@@ -2,9 +2,10 @@ from datetime import date
 
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
-from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
+from django.contrib.auth.mixins import LoginRequiredMixin
 from django.db import transaction
 from django.db.models import F, Sum
+from django.db.models.functions import ExtractWeekDay
 from django.shortcuts import redirect, render
 from django.urls import reverse_lazy
 from django.views.generic import CreateView, DeleteView, ListView, UpdateView
@@ -14,13 +15,8 @@ from .forms import ProductoForm, VentaForm
 from .models import Producto, Venta
 
 
-def es_administrador(user):
-    return user.is_superuser or user.groups.filter(name="Administrador").exists()
-
-
-class SoloAdministradorMixin(LoginRequiredMixin, UserPassesTestMixin):
-    def test_func(self):
-        return es_administrador(self.request.user)
+class GestionInventarioMixin(LoginRequiredMixin):
+    """Permite a cualquier usuario autenticado administrar el inventario."""
 
 
 class DashboardView(LoginRequiredMixin, TemplateView):
@@ -28,25 +24,49 @@ class DashboardView(LoginRequiredMixin, TemplateView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        ventas = Venta.objects.all() if es_administrador(self.request.user) else Venta.objects.filter(vendedor=self.request.user)
+        ventas = Venta.objects.all()
+        ventas_aceptadas = ventas.filter(estado=Venta.Estado.ACEPTADA)
+        ventas_por_dia = (
+            ventas_aceptadas.annotate(dia_semana=ExtractWeekDay("creada_en"))
+            .values("dia_semana")
+            .annotate(unidades_vendidas=Sum("cantidad"))
+            .order_by("-unidades_vendidas", "dia_semana")
+        )
+        productos_mas_vendidos = (
+            ventas_aceptadas.values("producto__nombre")
+            .annotate(unidades_vendidas=Sum("cantidad"))
+            .order_by("-unidades_vendidas", "producto__nombre")
+        )
+        dias_semana = {
+            1: "Domingo", 2: "Lunes", 3: "Martes", 4: "Miércoles",
+            5: "Jueves", 6: "Viernes", 7: "Sábado",
+        }
+        dia_mas_ventas = ventas_por_dia.first()
+        producto_mas_vendido = productos_mas_vendidos.first()
+
+        total_vendido = ventas_aceptadas.aggregate(total=Sum("total"))["total"] or 0
         context.update({
             "total_productos": Producto.objects.count(),
             "stock_bajo": Producto.objects.filter(stock__lte=5).count(),
             "ventas_hoy": ventas.filter(creada_en__date=date.today()).count(),
-            "ingresos": ventas.filter(estado=Venta.Estado.ACEPTADA).aggregate(total=Sum("total"))["total"] or 0,
+            "ingresos": total_vendido,
+            "total_vendido": total_vendido,
+            "dia_mas_ventas": dias_semana.get(dia_mas_ventas["dia_semana"]) if dia_mas_ventas else None,
+            "unidades_dia_mas_ventas": dia_mas_ventas["unidades_vendidas"] if dia_mas_ventas else 0,
+            "producto_mas_vendido": producto_mas_vendido["producto__nombre"] if producto_mas_vendido else None,
+            "unidades_producto_mas_vendido": producto_mas_vendido["unidades_vendidas"] if producto_mas_vendido else 0,
             "ultimas_ventas": ventas.select_related("producto", "vendedor")[:5],
-            "es_administrador": es_administrador(self.request.user),
         })
         return context
 
 
-class ProductoListView(SoloAdministradorMixin, ListView):
+class ProductoListView(GestionInventarioMixin, ListView):
     model = Producto
     template_name = "inventario/lista.html"
     context_object_name = "productos"
 
 
-class ProductoCreateView(SoloAdministradorMixin, CreateView):
+class ProductoCreateView(GestionInventarioMixin, CreateView):
     model = Producto
     form_class = ProductoForm
     template_name = "inventario/formulario.html"
@@ -57,7 +77,7 @@ class ProductoCreateView(SoloAdministradorMixin, CreateView):
         return super().form_valid(form)
 
 
-class ProductoUpdateView(SoloAdministradorMixin, UpdateView):
+class ProductoUpdateView(GestionInventarioMixin, UpdateView):
     model = Producto
     form_class = ProductoForm
     template_name = "inventario/formulario.html"
@@ -68,7 +88,7 @@ class ProductoUpdateView(SoloAdministradorMixin, UpdateView):
         return super().form_valid(form)
 
 
-class ProductoDeleteView(SoloAdministradorMixin, DeleteView):
+class ProductoDeleteView(GestionInventarioMixin, DeleteView):
     model = Producto
     template_name = "inventario/confirmar_eliminar.html"
     success_url = reverse_lazy("inventario:lista")
@@ -109,5 +129,4 @@ class VentaListView(LoginRequiredMixin, ListView):
     context_object_name = "ventas"
 
     def get_queryset(self):
-        ventas = Venta.objects.select_related("producto", "vendedor")
-        return ventas if es_administrador(self.request.user) else ventas.filter(vendedor=self.request.user)
+        return Venta.objects.select_related("producto", "vendedor")
