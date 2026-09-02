@@ -5,6 +5,7 @@ from django.test import TestCase
 from django.urls import reverse
 from django.utils import timezone
 
+from .forms import VentaForm
 from .models import Producto, Venta
 
 
@@ -53,6 +54,28 @@ class SeguridadYVentasTests(TestCase):
         self.assertEqual(self.producto.stock, 7)
         self.assertEqual(venta.total, 7500)
         self.assertEqual(venta.vendedor, self.vendedor)
+
+    def test_retirar_producto_lo_inactiva_y_lo_excluye_de_las_ventas(self):
+        self.client.force_login(self.vendedor)
+
+        response = self.client.post(reverse("inventario:cambiar_estado", args=[self.producto.pk]))
+
+        self.assertRedirects(response, reverse("inventario:lista"))
+        self.producto.refresh_from_db()
+        self.assertFalse(self.producto.activo)
+        self.assertNotIn(self.producto, VentaForm().fields["producto"].queryset)
+
+    def test_dashboard_cuenta_solo_productos_activos(self):
+        Producto.objects.create(nombre="Retirado", precio=3000, stock=2, activo=False)
+        self.producto.activo = False
+        self.producto.save(update_fields=["activo"])
+        self.client.force_login(self.vendedor)
+
+        response = self.client.get(reverse("dashboard"))
+
+        self.assertEqual(response.context["total_productos"], Producto.objects.filter(activo=True).count())
+        self.assertEqual(response.context["stock_bajo"], Producto.objects.filter(activo=True, stock__lte=5).count())
+        self.assertContains(response, "Productos activos")
 
     def test_dashboard_muestra_analisis_estadistico_de_ventas_aceptadas(self):
         producto_secundario = Producto.objects.create(nombre="Granola", precio=3000, stock=10)

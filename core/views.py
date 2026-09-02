@@ -6,9 +6,9 @@ from django.contrib.auth.mixins import LoginRequiredMixin
 from django.db import transaction
 from django.db.models import F, Sum
 from django.db.models.functions import ExtractWeekDay
-from django.shortcuts import redirect, render
+from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse_lazy
-from django.views.generic import CreateView, DeleteView, ListView, UpdateView
+from django.views.generic import CreateView, ListView, UpdateView
 from django.views.generic.base import TemplateView
 
 from .forms import ProductoForm, VentaForm
@@ -46,8 +46,8 @@ class DashboardView(LoginRequiredMixin, TemplateView):
 
         total_vendido = ventas_aceptadas.aggregate(total=Sum("total"))["total"] or 0
         context.update({
-            "total_productos": Producto.objects.count(),
-            "stock_bajo": Producto.objects.filter(stock__lte=5).count(),
+            "total_productos": Producto.objects.filter(activo=True).count(),
+            "stock_bajo": Producto.objects.filter(activo=True, stock__lte=5).count(),
             "ventas_hoy": ventas.filter(creada_en__date=date.today()).count(),
             "ingresos": total_vendido,
             "total_vendido": total_vendido,
@@ -88,14 +88,16 @@ class ProductoUpdateView(GestionInventarioMixin, UpdateView):
         return super().form_valid(form)
 
 
-class ProductoDeleteView(GestionInventarioMixin, DeleteView):
-    model = Producto
-    template_name = "inventario/confirmar_eliminar.html"
-    success_url = reverse_lazy("inventario:lista")
-
-    def form_valid(self, form):
-        messages.success(self.request, "Producto eliminado correctamente.")
-        return super().form_valid(form)
+@login_required
+def producto_cambiar_estado(request, pk):
+    producto = get_object_or_404(Producto, pk=pk)
+    if request.method == "POST":
+        producto.activo = not producto.activo
+        producto.save(update_fields=["activo"])
+        accion = "activado" if producto.activo else "retirado del catálogo"
+        messages.success(request, f"Producto {accion} correctamente.")
+        return redirect("inventario:lista")
+    return render(request, "inventario/confirmar_cambio_estado.html", {"producto": producto})
 
 
 @login_required

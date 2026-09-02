@@ -6,6 +6,7 @@ class Producto(models.Model):
     nombre = models.CharField(max_length=120, unique=True)
     precio = models.PositiveIntegerField(help_text="Precio en pesos chilenos")
     stock = models.PositiveIntegerField(default=0)
+    activo = models.BooleanField(default=True)
     creado_en = models.DateTimeField(auto_now_add=True)
     actualizado_en = models.DateTimeField(auto_now=True)
 

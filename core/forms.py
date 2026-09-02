@@ -20,4 +20,4 @@ class VentaForm(forms.Form):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.fields["producto"].queryset = Producto.objects.filter(stock__gt=0).order_by("nombre")
+        self.fields["producto"].queryset = Producto.objects.filter(activo=True, stock__gt=0).order_by("nombre")
