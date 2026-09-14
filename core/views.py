@@ -1,4 +1,6 @@
+import sys
 from datetime import date
+from pathlib import Path
 
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
@@ -13,6 +15,18 @@ from django.views.generic.base import TemplateView
 
 from .forms import CompraForm, ProductoForm, VentaItemFormSet
 from .models import Compra, Producto, Venta
+
+# solucion.py vive en la raiz del proyecto (junto a manage.py), fuera de core/,
+# asi que se agrega esa carpeta al path para importar decidir_venta sin copiarla.
+BASE_DIR = Path(__file__).resolve().parent.parent
+if str(BASE_DIR) not in sys.path:
+    sys.path.insert(0, str(BASE_DIR))
+
+from solucion import decidir_venta  # noqa: E402
+
+
+def es_administrador(user):
+    return user.is_superuser or user.groups.filter(name="Administrador").exists()
 
 
 class GestionInventarioMixin(LoginRequiredMixin):
@@ -93,6 +107,9 @@ class ProductoUpdateView(GestionInventarioMixin, UpdateView):
 
 @login_required
 def producto_cambiar_estado(request, pk):
+    if not es_administrador(request.user):
+        messages.error(request, "Solo un administrador puede gestionar el catálogo de productos.")
+        return redirect("dashboard")
     producto = get_object_or_404(Producto, pk=pk)
     if request.method == "POST":
         producto.activo = not producto.activo
@@ -124,13 +141,14 @@ def registrar_venta(request):
                     for item in items:
                         producto = Producto.objects.select_for_update().get(pk=item["producto"].pk)
                         cantidad = item["cantidad"]
-                        if cantidad > producto.stock:
-                            error = f'Stock insuficiente para "{producto.nombre}". Quedan {producto.stock} unidades.'
+                        catalogo_temp = {producto.nombre: {"precio": producto.precio, "stock": producto.stock}}
+                        resultado = decidir_venta(producto.nombre, cantidad, catalogo_temp)
+                        if resultado["estado"] != "Aceptado":
+                            error = resultado["motivo"]
                             break
-                        total = producto.precio * cantidad
                         Venta.objects.create(
                             compra=compra, producto=producto, cantidad=cantidad, precio_unitario=producto.precio,
-                            total=total, estado=Venta.Estado.ACEPTADA, motivo="Venta registrada",
+                            total=resultado["total"], estado=Venta.Estado.ACEPTADA, motivo=resultado["motivo"],
                             vendedor=request.user,
                         )
                         producto.stock = F("stock") - cantidad

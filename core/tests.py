@@ -56,6 +56,23 @@ class SeguridadYVentasTests(TestCase):
         self.assertRedirects(response, reverse("inventario:lista"))
         self.assertTrue(Producto.objects.filter(nombre="Granola").exists())
 
+    def test_vendedor_puede_crear_producto(self):
+        self.client.force_login(self.vendedor)
+        response = self.client.post(reverse("inventario:crear"), {
+            "nombre": "Granola", "precio": 4500, "stock": 12,
+        })
+        self.assertRedirects(response, reverse("inventario:lista"))
+        self.assertTrue(Producto.objects.filter(nombre="Granola").exists())
+
+    def test_vendedor_no_puede_cambiar_estado_de_producto(self):
+        self.client.force_login(self.vendedor)
+
+        response = self.client.post(reverse("inventario:cambiar_estado", args=[self.producto.pk]))
+
+        self.assertRedirects(response, reverse("dashboard"))
+        self.producto.refresh_from_db()
+        self.assertTrue(self.producto.activo)
+
     def test_venta_descuenta_stock_y_registra_usuario(self):
         self.client.force_login(self.vendedor)
         response = self._post_venta(
@@ -120,7 +137,7 @@ class SeguridadYVentasTests(TestCase):
         self.assertEqual(self.producto.stock, 10)
 
     def test_retirar_producto_lo_inactiva_y_lo_excluye_de_las_ventas(self):
-        self.client.force_login(self.vendedor)
+        self.client.force_login(self.admin)
 
         response = self.client.post(reverse("inventario:cambiar_estado", args=[self.producto.pk]))
 
