@@ -11,8 +11,8 @@ from django.urls import reverse_lazy
 from django.views.generic import CreateView, ListView, UpdateView
 from django.views.generic.base import TemplateView
 
-from .forms import ProductoForm, VentaForm
-from .models import Producto, Venta
+from .forms import CompraForm, ProductoForm, VentaItemFormSet
+from .models import Compra, Producto, Venta
 
 
 class GestionInventarioMixin(LoginRequiredMixin):
@@ -25,6 +25,7 @@ class DashboardView(LoginRequiredMixin, TemplateView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         ventas = Venta.objects.all()
+        compras = Compra.objects.all()
         ventas_aceptadas = ventas.filter(estado=Venta.Estado.ACEPTADA)
         ventas_por_dia = (
             ventas_aceptadas.annotate(dia_semana=ExtractWeekDay("creada_en"))
@@ -45,17 +46,19 @@ class DashboardView(LoginRequiredMixin, TemplateView):
         producto_mas_vendido = productos_mas_vendidos.first()
 
         total_vendido = ventas_aceptadas.aggregate(total=Sum("total"))["total"] or 0
+        productos_stock_bajo = Producto.objects.filter(activo=True, stock__lte=5).order_by("stock")
         context.update({
             "total_productos": Producto.objects.filter(activo=True).count(),
-            "stock_bajo": Producto.objects.filter(activo=True, stock__lte=5).count(),
-            "ventas_hoy": ventas.filter(creada_en__date=date.today()).count(),
+            "stock_bajo": productos_stock_bajo.count(),
+            "productos_stock_bajo": productos_stock_bajo,
+            "ventas_hoy": compras.filter(creada_en__date=date.today()).count(),
             "ingresos": total_vendido,
             "total_vendido": total_vendido,
             "dia_mas_ventas": dias_semana.get(dia_mas_ventas["dia_semana"]) if dia_mas_ventas else None,
             "unidades_dia_mas_ventas": dia_mas_ventas["unidades_vendidas"] if dia_mas_ventas else 0,
             "producto_mas_vendido": producto_mas_vendido["producto__nombre"] if producto_mas_vendido else None,
             "unidades_producto_mas_vendido": producto_mas_vendido["unidades_vendidas"] if producto_mas_vendido else 0,
-            "ultimas_ventas": ventas.select_related("producto", "vendedor")[:5],
+            "ultimas_compras": compras.select_related("vendedor").prefetch_related("ventas__producto")[:5],
         })
         return context
 
@@ -103,32 +106,52 @@ def producto_cambiar_estado(request, pk):
 @login_required
 def registrar_venta(request):
     if request.method == "POST":
-        form = VentaForm(request.POST)
-        if form.is_valid():
-            with transaction.atomic():
-                producto = Producto.objects.select_for_update().get(pk=form.cleaned_data["producto"].pk)
-                cantidad = form.cleaned_data["cantidad"]
-                if cantidad > producto.stock:
-                    form.add_error("cantidad", f"Stock insuficiente. Solo hay {producto.stock} unidades disponibles.")
-                else:
-                    total = producto.precio * cantidad
-                    Venta.objects.create(
-                        producto=producto, cantidad=cantidad, precio_unitario=producto.precio,
-                        total=total, estado=Venta.Estado.ACEPTADA, motivo="Venta registrada", vendedor=request.user,
+        compra_form = CompraForm(request.POST)
+        formset = VentaItemFormSet(request.POST)
+        if compra_form.is_valid() and formset.is_valid():
+            items = [
+                form.cleaned_data for form in formset
+                if form.cleaned_data and not form.cleaned_data.get("DELETE")
+            ]
+            if not items:
+                messages.error(request, "Agrega al menos un producto a la venta.")
+            else:
+                error = None
+                with transaction.atomic():
+                    compra = Compra.objects.create(
+                        vendedor=request.user, metodo_pago=compra_form.cleaned_data["metodo_pago"],
                     )
-                    producto.stock = F("stock") - cantidad
-                    producto.save(update_fields=["stock"])
+                    for item in items:
+                        producto = Producto.objects.select_for_update().get(pk=item["producto"].pk)
+                        cantidad = item["cantidad"]
+                        if cantidad > producto.stock:
+                            error = f'Stock insuficiente para "{producto.nombre}". Quedan {producto.stock} unidades.'
+                            break
+                        total = producto.precio * cantidad
+                        Venta.objects.create(
+                            compra=compra, producto=producto, cantidad=cantidad, precio_unitario=producto.precio,
+                            total=total, estado=Venta.Estado.ACEPTADA, motivo="Venta registrada",
+                            vendedor=request.user,
+                        )
+                        producto.stock = F("stock") - cantidad
+                        producto.save(update_fields=["stock"])
+                    if error:
+                        transaction.set_rollback(True)
+                if error:
+                    messages.error(request, error)
+                else:
                     messages.success(request, "Venta registrada y stock actualizado.")
                     return redirect("ventas:lista")
     else:
-        form = VentaForm()
-    return render(request, "ventas/registrar.html", {"form": form})
+        compra_form = CompraForm()
+        formset = VentaItemFormSet()
+    return render(request, "ventas/registrar.html", {"compra_form": compra_form, "formset": formset})
 
 
 class VentaListView(LoginRequiredMixin, ListView):
-    model = Venta
+    model = Compra
     template_name = "ventas/lista.html"
-    context_object_name = "ventas"
+    context_object_name = "compras"
 
     def get_queryset(self):
-        return Venta.objects.select_related("producto", "vendedor")
+        return Compra.objects.select_related("vendedor").prefetch_related("ventas__producto")

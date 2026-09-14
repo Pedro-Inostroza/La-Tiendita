@@ -26,6 +26,23 @@
         small { color: var(--muted); font-weight: 700; letter-spacing: .035em; text-transform: uppercase; }
         .descripcion, .analisis span { color: var(--muted); }
         .analisis { border-left: 3px solid var(--coral); padding: 5px 0 5px 16px; }
+        .tarjeta-desplegable summary { cursor: pointer; list-style: none; }
+        .tarjeta-desplegable summary::-webkit-details-marker { display: none; }
+        .tarjeta-desplegable summary::after { content: "Ver detalle ▾"; display: block; margin-top: 8px; font-size: .72rem; font-weight: 700; text-transform: none; letter-spacing: 0; color: var(--coral); }
+        .tarjeta-desplegable[open] summary::after { content: "Ocultar detalle ▴"; }
+        .lista-stock-bajo { margin: 12px 0 0; padding-left: 18px; }
+        .lista-stock-bajo li { color: var(--tinta); margin-bottom: 4px; }
+        .lista-stock-bajo .vacio { list-style: none; margin-left: -18px; color: var(--muted); }
+        .fila-producto { display: grid; grid-template-columns: 1fr 1fr 110px auto; gap: 10px; align-items: end; padding: 16px 0; border-bottom: 1px solid var(--borde); }
+        .fila-producto label { margin: 0 0 4px; font-size: .78rem; }
+        .fila-producto input, .fila-producto select { margin: 0; }
+        .fila-producto .quitar-producto { margin: 0; padding: 11px 16px; white-space: nowrap; }
+        .fila-producto input[name$="-DELETE"] { display: none; }
+        .fila-producto:first-child { padding-top: 0; }
+        #agregar-producto { margin-top: 16px; }
+        .acciones-formulario { margin-top: 8px; }
+        .acciones-formulario .boton { margin-left: 10px; }
+        @media (max-width: 700px) { .fila-producto { grid-template-columns: 1fr; } }
         .dato { font-family: Georgia, "Times New Roman", serif; font-size: 1.55rem; font-weight: bold; color: var(--tinta); margin: 7px 0; }
         label { display: block; margin: 16px 0 6px; font-weight: 700; color: var(--tinta); }
         input, select { width: 100%; padding: 12px 13px; border: 1px solid var(--borde); border-radius: 10px; background: #fffdfc; color: var(--tinta); font: inherit; }
@@ -45,7 +62,7 @@
 </head>
 <body>
     {% if user.is_authenticated %}
-    <nav><a class="marca" href="{% url 'dashboard' %}">La Tiendita</a><a href="{% url 'dashboard' %}">Dashboard</a><a href="{% url 'ventas:lista' %}">Ventas</a><a href="{% url 'inventario:lista' %}">Inventario</a><span>{{ user.username }}</span><form method="post" action="{% url 'logout' %}">{% csrf_token %}<button type="submit">Salir</button></form></nav>
+    <nav><a class="marca" href="{% url 'dashboard' %}">La Tiendita</a><a href="{% url 'dashboard' %}">Resumen</a><a href="{% url 'ventas:lista' %}">Ventas</a><a href="{% url 'inventario:lista' %}">Inventario</a><span>{{ user.username }}</span><form method="post" action="{% url 'logout' %}">{% csrf_token %}<button type="submit">Salir</button></form></nav>
     {% endif %}
     <main>{% for message in messages %}<div class="mensaje">{{ message }}</div>{% endfor %}{% block content %}{% endblock %}</main>
 </body>

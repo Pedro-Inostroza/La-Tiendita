@@ -5,8 +5,8 @@ from django.test import TestCase
 from django.urls import reverse
 from django.utils import timezone
 
-from .forms import VentaForm
-from .models import Producto, Venta
+from .forms import VentaItemForm
+from .models import Compra, Producto, Venta
 
 
 class SeguridadYVentasTests(TestCase):
@@ -20,6 +20,19 @@ class SeguridadYVentasTests(TestCase):
         administradores, _ = Group.objects.get_or_create(name="Administrador")
         self.vendedor.groups.add(vendedores)
         self.admin.groups.add(administradores)
+
+    def _post_venta(self, metodo_pago, items):
+        data = {
+            "metodo_pago": metodo_pago,
+            "form-TOTAL_FORMS": str(len(items)),
+            "form-INITIAL_FORMS": "0",
+            "form-MIN_NUM_FORMS": "0",
+            "form-MAX_NUM_FORMS": "1000",
+        }
+        for index, item in enumerate(items):
+            for key, value in item.items():
+                data[f"form-{index}-{key}"] = value
+        return self.client.post(reverse("ventas:registrar"), data)
 
     def test_inicio_muestra_login(self):
         response = self.client.get("/")
@@ -45,15 +58,66 @@ class SeguridadYVentasTests(TestCase):
 
     def test_venta_descuenta_stock_y_registra_usuario(self):
         self.client.force_login(self.vendedor)
-        response = self.client.post(reverse("ventas:registrar"), {
-            "producto": self.producto.pk, "cantidad": 3,
-        })
+        response = self._post_venta(
+            Compra.MetodoPago.EFECTIVO,
+            [{"producto": self.producto.pk, "cantidad": 3}],
+        )
         self.assertRedirects(response, reverse("ventas:lista"))
         self.producto.refresh_from_db()
+        compra = Compra.objects.get()
         venta = Venta.objects.get()
         self.assertEqual(self.producto.stock, 7)
         self.assertEqual(venta.total, 7500)
         self.assertEqual(venta.vendedor, self.vendedor)
+        self.assertEqual(venta.compra, compra)
+        self.assertEqual(compra.metodo_pago, Compra.MetodoPago.EFECTIVO)
+
+    def test_venta_por_codigo_de_barras_selecciona_producto(self):
+        self.producto.codigo_barras = "7801234567890"
+        self.producto.save(update_fields=["codigo_barras"])
+        self.client.force_login(self.vendedor)
+        response = self._post_venta(
+            Compra.MetodoPago.DEBITO,
+            [{"codigo_barras": "7801234567890", "cantidad": 2}],
+        )
+        self.assertRedirects(response, reverse("ventas:lista"))
+        venta = Venta.objects.get()
+        self.assertEqual(venta.producto, self.producto)
+        self.assertEqual(venta.compra.metodo_pago, Compra.MetodoPago.DEBITO)
+
+    def test_venta_admite_varios_productos_en_una_sola_compra(self):
+        producto_secundario = Producto.objects.create(nombre="Granola", precio=3000, stock=10)
+        self.client.force_login(self.vendedor)
+        response = self._post_venta(
+            Compra.MetodoPago.TRANSFERENCIA,
+            [
+                {"producto": self.producto.pk, "cantidad": 2},
+                {"producto": producto_secundario.pk, "cantidad": 4},
+            ],
+        )
+        self.assertRedirects(response, reverse("ventas:lista"))
+        compra = Compra.objects.get()
+        self.assertEqual(compra.ventas.count(), 2)
+        self.assertEqual(compra.total, 2 * 2500 + 4 * 3000)
+        self.producto.refresh_from_db()
+        producto_secundario.refresh_from_db()
+        self.assertEqual(self.producto.stock, 8)
+        self.assertEqual(producto_secundario.stock, 6)
+
+    def test_venta_falla_completa_si_un_producto_no_tiene_stock(self):
+        producto_secundario = Producto.objects.create(nombre="Granola", precio=3000, stock=1)
+        self.client.force_login(self.vendedor)
+        response = self._post_venta(
+            Compra.MetodoPago.EFECTIVO,
+            [
+                {"producto": self.producto.pk, "cantidad": 2},
+                {"producto": producto_secundario.pk, "cantidad": 5},
+            ],
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(Compra.objects.exists())
+        self.producto.refresh_from_db()
+        self.assertEqual(self.producto.stock, 10)
 
     def test_retirar_producto_lo_inactiva_y_lo_excluye_de_las_ventas(self):
         self.client.force_login(self.vendedor)
@@ -63,7 +127,7 @@ class SeguridadYVentasTests(TestCase):
         self.assertRedirects(response, reverse("inventario:lista"))
         self.producto.refresh_from_db()
         self.assertFalse(self.producto.activo)
-        self.assertNotIn(self.producto, VentaForm().fields["producto"].queryset)
+        self.assertNotIn(self.producto, VentaItemForm().fields["producto"].queryset)
 
     def test_dashboard_cuenta_solo_productos_activos(self):
         Producto.objects.create(nombre="Retirado", precio=3000, stock=2, activo=False)
@@ -95,8 +159,8 @@ class SeguridadYVentasTests(TestCase):
         response = self.client.get(reverse("dashboard"))
 
         self.assertContains(response, "Análisis estadístico")
-        self.assertContains(response, "$16000")
+        self.assertContains(response, "$16.000")
         self.assertContains(response, "Lunes")
         self.assertContains(response, "4 unidades vendidas")
         self.assertContains(response, "Kombucha")
-        self.assertNotContains(response, "$46000")
+        self.assertNotContains(response, "$46.000")

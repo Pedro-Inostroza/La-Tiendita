@@ -1,3 +1,93 @@
 {% extends 'base.html' %}
 {% block title %}Nueva venta | La Tiendita{% endblock %}
-{% block content %}<section class="card"><h1>Registrar venta</h1><form method="post">{% csrf_token %}{% for field in form %}<label for="{{ field.id_for_label }}">{{ field.label }}</label>{{ field }}<div class="errores">{{ field.errors }}</div>{% endfor %}<button type="submit">Registrar</button><a class="boton" href="{% url 'ventas:lista' %}">Cancelar</a></form></section>{% endblock %}
+{% block content %}
+<section class="card">
+    <h1>Registrar venta</h1>
+    <form method="post" id="form-venta">
+        {% csrf_token %}
+        <label for="{{ compra_form.metodo_pago.id_for_label }}">{{ compra_form.metodo_pago.label }}</label>
+        {{ compra_form.metodo_pago }}
+        <div class="errores">{{ compra_form.metodo_pago.errors }}</div>
+
+        {{ formset.management_form }}
+        <h2>Productos</h2>
+        <div id="filas-productos">
+            {% for item_form in formset %}
+            <div class="fila-producto">
+                <div>
+                    <label for="{{ item_form.codigo_barras.id_for_label }}">Código de barras</label>
+                    {{ item_form.codigo_barras }}
+                </div>
+                <div>
+                    <label for="{{ item_form.producto.id_for_label }}">Producto</label>
+                    {{ item_form.producto }}
+                </div>
+                <div>
+                    <label for="{{ item_form.cantidad.id_for_label }}">Cantidad</label>
+                    {{ item_form.cantidad }}
+                </div>
+                {{ item_form.DELETE }}
+                <button type="button" class="quitar-producto boton peligro">Quitar</button>
+                <div class="errores">{{ item_form.non_field_errors }}{{ item_form.codigo_barras.errors }}{{ item_form.producto.errors }}{{ item_form.cantidad.errors }}</div>
+            </div>
+            {% endfor %}
+        </div>
+        <button type="button" id="agregar-producto" class="boton">Agregar producto</button>
+
+        <div class="acciones-formulario">
+            <button type="submit">Registrar venta</button>
+            <a class="boton" href="{% url 'ventas:lista' %}">Cancelar</a>
+        </div>
+    </form>
+</section>
+
+<template id="plantilla-fila">
+    <div class="fila-producto">
+        <div>
+            <label>Código de barras</label>
+            {{ formset.empty_form.codigo_barras }}
+        </div>
+        <div>
+            <label>Producto</label>
+            {{ formset.empty_form.producto }}
+        </div>
+        <div>
+            <label>Cantidad</label>
+            {{ formset.empty_form.cantidad }}
+        </div>
+        {{ formset.empty_form.DELETE }}
+        <button type="button" class="quitar-producto boton peligro">Quitar</button>
+    </div>
+</template>
+
+<script>
+(function () {
+    var totalForms = document.querySelector('#id_form-TOTAL_FORMS');
+    var filas = document.querySelector('#filas-productos');
+    var plantilla = document.querySelector('#plantilla-fila').innerHTML;
+
+    document.querySelector('#agregar-producto').addEventListener('click', function () {
+        var index = parseInt(totalForms.value, 10);
+        var html = plantilla.split('__prefix__').join(index);
+        var envoltorio = document.createElement('div');
+        envoltorio.innerHTML = html.trim();
+        filas.appendChild(envoltorio.firstElementChild);
+        totalForms.value = index + 1;
+    });
+
+    filas.addEventListener('click', function (event) {
+        if (!event.target.classList.contains('quitar-producto')) {
+            return;
+        }
+        var fila = event.target.closest('.fila-producto');
+        var eliminar = fila.querySelector('input[type="checkbox"][name$="-DELETE"]');
+        if (eliminar) {
+            eliminar.checked = true;
+            fila.style.display = 'none';
+        } else {
+            fila.remove();
+        }
+    });
+})();
+</script>
+{% endblock %}
