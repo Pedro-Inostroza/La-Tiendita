@@ -1,7 +1,7 @@
 from django import forms
 from django.forms import formset_factory
 
-from .models import Compra, Producto
+from .models import FormaPago, Producto
 
 
 class ProductoForm(forms.ModelForm):
@@ -19,18 +19,27 @@ class ProductoForm(forms.ModelForm):
         return self.cleaned_data["codigo_barras"] or None
 
 
-class CompraForm(forms.Form):
-    metodo_pago = forms.ChoiceField(label="Tipo de pago", choices=Compra.MetodoPago.choices)
+class FormaPagoForm(forms.Form):
+    tipo = forms.ChoiceField(
+        label="Forma de pago",
+        choices=FormaPago.Tipo.choices,
+        widget=forms.RadioSelect,
+    )
+    # El monto ya no se escribe: se calcula solo a partir del total de la venta.
+    monto = forms.IntegerField(label="Monto", min_value=1, widget=forms.HiddenInput)
+
+
+FormaPagoFormSet = formset_factory(FormaPagoForm, extra=1, can_delete=True)
 
 
 class VentaItemForm(forms.Form):
-    codigo_barras = forms.CharField(
-        label="Código de barras",
-        required=False,
-        widget=forms.TextInput(attrs={"placeholder": "Escanea o escribe el código"}),
-    )
+    # Se mantiene el campo (la busqueda por codigo sigue funcionando en el
+    # servidor), pero ahora se llena desde el buscador global del formulario,
+    # asi que la fila no necesita mostrarlo.
+    codigo_barras = forms.CharField(label="Código de barras", required=False, widget=forms.HiddenInput)
     producto = forms.ModelChoiceField(
-        queryset=Producto.objects.none(), empty_label="Selecciona un producto", required=False
+        queryset=Producto.objects.none(), empty_label="Selecciona un producto", required=False,
+        widget=forms.Select(attrs={"class": "select-producto-real"}),
     )
     cantidad = forms.IntegerField(min_value=1, widget=forms.NumberInput(attrs={"min": 1}))
 

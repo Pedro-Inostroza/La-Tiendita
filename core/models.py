@@ -19,14 +19,7 @@ class Producto(models.Model):
 
 
 class Compra(models.Model):
-    class MetodoPago(models.TextChoices):
-        DEBITO = "DEBITO", "Débito"
-        CREDITO = "CREDITO", "Crédito"
-        EFECTIVO = "EFECTIVO", "Efectivo"
-        TRANSFERENCIA = "TRANSFERENCIA", "Transferencia"
-
     vendedor = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="compras")
-    metodo_pago = models.CharField(max_length=15, choices=MetodoPago.choices)
     creada_en = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -38,6 +31,25 @@ class Compra(models.Model):
     @property
     def total(self):
         return self.ventas.aggregate(total=models.Sum("total"))["total"] or 0
+
+    @property
+    def total_pagado(self):
+        return self.formas_pago.aggregate(total=models.Sum("monto"))["total"] or 0
+
+
+class FormaPago(models.Model):
+    class Tipo(models.TextChoices):
+        DEBITO = "DEBITO", "Débito"
+        CREDITO = "CREDITO", "Crédito"
+        EFECTIVO = "EFECTIVO", "Efectivo"
+        TRANSFERENCIA = "TRANSFERENCIA", "Transferencia"
+
+    compra = models.ForeignKey(Compra, on_delete=models.CASCADE, related_name="formas_pago")
+    tipo = models.CharField(max_length=15, choices=Tipo.choices)
+    monto = models.PositiveIntegerField()
+
+    def __str__(self):
+        return f"{self.get_tipo_display()} ${self.monto}"
 
 
 class Venta(models.Model):

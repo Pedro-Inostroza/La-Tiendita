@@ -5,78 +5,286 @@
     <h1>Registrar venta</h1>
     <form method="post" id="form-venta">
         {% csrf_token %}
-        <label for="{{ compra_form.metodo_pago.id_for_label }}">{{ compra_form.metodo_pago.label }}</label>
-        {{ compra_form.metodo_pago }}
-        <div class="errores">{{ compra_form.metodo_pago.errors }}</div>
+
+        {{ pago_formset.management_form }}
+        <h2>1. Método de pago</h2>
+        <p class="descripcion">Elige cómo paga el cliente. Puedes combinar varios métodos en la misma venta.</p>
+        <div id="filas-pago">
+            {% for pago_form in pago_formset %}
+            <div class="fila-pago">
+                <div class="opciones-pago">{{ pago_form.tipo }}</div>
+                {{ pago_form.monto }}
+                {{ pago_form.DELETE }}
+                <button type="button" class="quitar-fila boton peligro">Quitar</button>
+                <div class="errores">{{ pago_form.non_field_errors }}{{ pago_form.tipo.errors }}{{ pago_form.monto.errors }}</div>
+            </div>
+            {% endfor %}
+        </div>
+        <button type="button" id="agregar-pago" class="boton">Agregar forma de pago</button>
 
         {{ formset.management_form }}
-        <h2>Productos</h2>
+        <h2>2. Productos</h2>
+        <p class="descripcion">Escanea con la pistola o escribe el código o el nombre y presiona Enter para agregarlo a la venta.</p>
+        <input type="text" id="buscador-global" class="buscador-global" list="datalist-productos"
+               autocomplete="off" placeholder="Escanea o busca un producto...">
+        <div id="sin-productos" class="descripcion">Todavía no agregaste productos a esta venta.</div>
         <div id="filas-productos">
             {% for item_form in formset %}
             <div class="fila-producto">
                 <div>
-                    <label for="{{ item_form.codigo_barras.id_for_label }}">Código de barras</label>
-                    {{ item_form.codigo_barras }}
-                </div>
-                <div>
-                    <label for="{{ item_form.producto.id_for_label }}">Producto</label>
+                    <label>Producto</label>
+                    <input type="text" class="nombre-producto" readonly tabindex="-1">
                     {{ item_form.producto }}
+                    {{ item_form.codigo_barras }}
                 </div>
                 <div>
                     <label for="{{ item_form.cantidad.id_for_label }}">Cantidad</label>
                     {{ item_form.cantidad }}
                 </div>
+                <div>
+                    <label>Subtotal</label>
+                    <div class="dato subtotal">$0</div>
+                </div>
                 {{ item_form.DELETE }}
-                <button type="button" class="quitar-producto boton peligro">Quitar</button>
+                <button type="button" class="quitar-fila boton peligro">Quitar</button>
                 <div class="errores">{{ item_form.non_field_errors }}{{ item_form.codigo_barras.errors }}{{ item_form.producto.errors }}{{ item_form.cantidad.errors }}</div>
             </div>
             {% endfor %}
         </div>
-        <button type="button" id="agregar-producto" class="boton">Agregar producto</button>
+
+        <div class="grid resumen-pago">
+            <div class="analisis"><small>Total a pagar</small><div class="metric" id="total-a-pagar">$0</div></div>
+        </div>
+
+        <div class="grid resumen-pago" id="bloque-efectivo" style="display: none;">
+            <div>
+                <label for="efectivo-recibido">Efectivo recibido</label>
+                <input type="number" id="efectivo-recibido" min="0" step="1" placeholder="0" autocomplete="off">
+            </div>
+            <div class="analisis"><small>Vuelto</small><div class="metric" id="vuelto">$0</div><span id="falta-efectivo"></span></div>
+        </div>
 
         <div class="acciones-formulario">
-            <button type="submit">Registrar venta</button>
+            <button type="submit" id="btn-confirmar">Registrar venta</button>
             <a class="boton" href="{% url 'ventas:lista' %}">Cancelar</a>
         </div>
     </form>
 </section>
 
+<datalist id="datalist-productos"></datalist>
+
 <template id="plantilla-fila">
     <div class="fila-producto">
         <div>
-            <label>Código de barras</label>
-            {{ formset.empty_form.codigo_barras }}
-        </div>
-        <div>
             <label>Producto</label>
+            <input type="text" class="nombre-producto" readonly tabindex="-1">
             {{ formset.empty_form.producto }}
+            {{ formset.empty_form.codigo_barras }}
         </div>
         <div>
             <label>Cantidad</label>
             {{ formset.empty_form.cantidad }}
         </div>
+        <div>
+            <label>Subtotal</label>
+            <div class="dato subtotal">$0</div>
+        </div>
         {{ formset.empty_form.DELETE }}
-        <button type="button" class="quitar-producto boton peligro">Quitar</button>
+        <button type="button" class="quitar-fila boton peligro">Quitar</button>
+    </div>
+</template>
+
+<template id="plantilla-fila-pago">
+    <div class="fila-pago">
+        <div class="opciones-pago">{{ pago_formset.empty_form.tipo }}</div>
+        {{ pago_formset.empty_form.monto }}
+        {{ pago_formset.empty_form.DELETE }}
+        <button type="button" class="quitar-fila boton peligro">Quitar</button>
     </div>
 </template>
 
 <script>
 (function () {
-    var totalForms = document.querySelector('#id_form-TOTAL_FORMS');
-    var filas = document.querySelector('#filas-productos');
-    var plantilla = document.querySelector('#plantilla-fila').innerHTML;
+    var PRODUCTOS = {{ productos_json|safe }};
+    var form = document.getElementById('form-venta');
+    var buscadorGlobal = document.getElementById('buscador-global');
+    var contenedorProductos = document.getElementById('filas-productos');
+    var avisoVacio = document.getElementById('sin-productos');
 
-    document.querySelector('#agregar-producto').addEventListener('click', function () {
-        var index = parseInt(totalForms.value, 10);
-        var html = plantilla.split('__prefix__').join(index);
-        var envoltorio = document.createElement('div');
-        envoltorio.innerHTML = html.trim();
-        filas.appendChild(envoltorio.firstElementChild);
-        totalForms.value = index + 1;
+    var productosPorId = {};
+    var productosPorNombre = {};
+    var productosPorCodigo = {};
+    PRODUCTOS.forEach(function (p) {
+        productosPorId[p.id] = p;
+        productosPorNombre[p.nombre.trim().toLowerCase()] = p;
+        if (p.codigo_barras) {
+            productosPorCodigo[p.codigo_barras] = p;
+        }
     });
 
-    filas.addEventListener('click', function (event) {
-        if (!event.target.classList.contains('quitar-producto')) {
+    var datalist = document.getElementById('datalist-productos');
+    PRODUCTOS.forEach(function (p) {
+        var option = document.createElement('option');
+        option.value = p.nombre;
+        if (p.codigo_barras) {
+            option.label = p.codigo_barras;
+        }
+        datalist.appendChild(option);
+    });
+
+    function formatoCLP(numero) {
+        var entero = Math.max(0, Math.round(numero || 0));
+        return '$' + entero.toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+    }
+
+    function filaVisible(fila) {
+        return fila.style.display !== 'none';
+    }
+
+    function filasProductoVisibles() {
+        return Array.prototype.filter.call(
+            contenedorProductos.querySelectorAll('.fila-producto'), filaVisible
+        );
+    }
+
+    function buscarProducto(texto) {
+        var limpio = (texto || '').trim();
+        if (!limpio) {
+            return null;
+        }
+        return productosPorCodigo[limpio] || productosPorNombre[limpio.toLowerCase()] || null;
+    }
+
+    function nuevaFilaProducto() {
+        var totalForms = document.getElementById('id_form-TOTAL_FORMS');
+        var index = parseInt(totalForms.value, 10);
+        var html = document.getElementById('plantilla-fila').innerHTML.split('__prefix__').join(index);
+        var envoltorio = document.createElement('div');
+        envoltorio.innerHTML = html.trim();
+        var fila = envoltorio.firstElementChild;
+        contenedorProductos.appendChild(fila);
+        totalForms.value = index + 1;
+        return fila;
+    }
+
+    function agregarProducto(producto) {
+        var existente = null;
+        filasProductoVisibles().forEach(function (fila) {
+            var select = fila.querySelector('.select-producto-real');
+            if (select && String(select.value) === String(producto.id)) {
+                existente = fila;
+            }
+        });
+        if (existente) {
+            // Si el producto ya esta en la venta, se suma una unidad en vez de repetir la fila.
+            var cantidad = existente.querySelector('input[name$="-cantidad"]');
+            cantidad.value = (parseInt(cantidad.value, 10) || 0) + 1;
+        } else {
+            var fila = nuevaFilaProducto();
+            fila.querySelector('.select-producto-real').value = producto.id;
+            fila.querySelector('.nombre-producto').value = producto.nombre;
+            fila.querySelector('input[name$="-cantidad"]').value = 1;
+        }
+        recalcularTotales();
+    }
+
+    function recalcularTotales() {
+        var totalAPagar = 0;
+        filasProductoVisibles().forEach(function (fila) {
+            var select = fila.querySelector('.select-producto-real');
+            var cantidadInput = fila.querySelector('input[name$="-cantidad"]');
+            var producto = select && productosPorId[select.value];
+            var cantidad = cantidadInput ? parseInt(cantidadInput.value, 10) || 0 : 0;
+            var subtotal = producto ? producto.precio * cantidad : 0;
+            totalAPagar += subtotal;
+            fila.querySelector('.subtotal').textContent = formatoCLP(subtotal);
+        });
+
+        // El monto de cada forma de pago se reparte solo a partir del total de la
+        // venta: con una sola forma de pago se le asigna el total completo y, si
+        // hay varias, se divide en partes iguales dejando el resto en la primera.
+        var filasPago = Array.prototype.filter.call(
+            document.querySelectorAll('#filas-pago .fila-pago'), filaVisible
+        );
+        var totalPagado = 0;
+        if (filasPago.length) {
+            var porFila = Math.floor(totalAPagar / filasPago.length);
+            var resto = totalAPagar - porFila * filasPago.length;
+            filasPago.forEach(function (fila, indice) {
+                var montoInput = fila.querySelector('input[name$="-monto"]');
+                var monto = porFila + (indice === 0 ? resto : 0);
+                if (montoInput) {
+                    montoInput.value = monto;
+                }
+                totalPagado += monto;
+            });
+        }
+
+        document.getElementById('total-a-pagar').textContent = formatoCLP(totalAPagar);
+        document.getElementById('btn-confirmar').disabled = totalAPagar <= 0 || totalPagado < totalAPagar;
+        actualizarVuelto(totalAPagar, filasPago);
+        avisoVacio.style.display = filasProductoVisibles().length ? 'none' : '';
+    }
+
+    // El vuelto solo tiene sentido cuando el cliente paga en efectivo.
+    function hayPagoEnEfectivo(filasPago) {
+        return filasPago.some(function (fila) {
+            var elegido = fila.querySelector('input[type="radio"]:checked');
+            return elegido && elegido.value === 'EFECTIVO';
+        });
+    }
+
+    function actualizarVuelto(totalAPagar, filasPago) {
+        var bloque = document.getElementById('bloque-efectivo');
+        var recibidoInput = document.getElementById('efectivo-recibido');
+        var falta = document.getElementById('falta-efectivo');
+        if (!hayPagoEnEfectivo(filasPago)) {
+            bloque.style.display = 'none';
+            return;
+        }
+        bloque.style.display = '';
+        var recibido = parseInt(recibidoInput.value, 10) || 0;
+        document.getElementById('vuelto').textContent = formatoCLP(Math.max(0, recibido - totalAPagar));
+        falta.textContent = recibido > 0 && recibido < totalAPagar
+            ? 'Faltan ' + formatoCLP(totalAPagar - recibido)
+            : '';
+    }
+
+    // Buscador global: la pistola de codigo de barras escribe y manda Enter.
+    buscadorGlobal.addEventListener('keydown', function (event) {
+        if (event.key !== 'Enter') {
+            return;
+        }
+        event.preventDefault();
+        var producto = buscarProducto(buscadorGlobal.value);
+        if (producto) {
+            agregarProducto(producto);
+            buscadorGlobal.value = '';
+        }
+    });
+
+    buscadorGlobal.addEventListener('input', function () {
+        // Coincidencia exacta por codigo o por nombre elegido del datalist.
+        var producto = buscarProducto(buscadorGlobal.value);
+        if (producto) {
+            agregarProducto(producto);
+            buscadorGlobal.value = '';
+        }
+    });
+
+    form.addEventListener('input', function (event) {
+        if (event.target === buscadorGlobal) {
+            return;
+        }
+        recalcularTotales();
+    });
+
+    form.addEventListener('change', function () {
+        recalcularTotales();
+    });
+
+    contenedorProductos.addEventListener('click', function (event) {
+        if (!event.target.classList.contains('quitar-fila')) {
             return;
         }
         var fila = event.target.closest('.fila-producto');
@@ -87,7 +295,64 @@
         } else {
             fila.remove();
         }
+        recalcularTotales();
     });
+
+    var contenedorPagos = document.getElementById('filas-pago');
+    document.getElementById('agregar-pago').addEventListener('click', function () {
+        var totalForms = document.getElementById('id_pago-TOTAL_FORMS');
+        var index = parseInt(totalForms.value, 10);
+        var html = document.getElementById('plantilla-fila-pago').innerHTML.split('__prefix__').join(index);
+        var envoltorio = document.createElement('div');
+        envoltorio.innerHTML = html.trim();
+        contenedorPagos.appendChild(envoltorio.firstElementChild);
+        totalForms.value = index + 1;
+        recalcularTotales();
+    });
+
+    contenedorPagos.addEventListener('click', function (event) {
+        if (!event.target.classList.contains('quitar-fila')) {
+            return;
+        }
+        var fila = event.target.closest('.fila-pago');
+        var eliminar = fila.querySelector('input[type="checkbox"][name$="-DELETE"]');
+        if (eliminar) {
+            eliminar.checked = true;
+            fila.style.display = 'none';
+        } else {
+            fila.remove();
+        }
+        recalcularTotales();
+    });
+
+    // El formset trae una fila extra vacia; la venta parte sin filas y se llenan
+    // desde el buscador global.
+    (function limpiarFilasVacias() {
+        var totalForms = document.getElementById('id_form-TOTAL_FORMS');
+        var filas = contenedorProductos.querySelectorAll('.fila-producto');
+        for (var i = filas.length - 1; i >= 0; i--) {
+            var select = filas[i].querySelector('.select-producto-real');
+            var errores = filas[i].querySelector('.errores');
+            if (select && select.value === '' && (!errores || !errores.textContent.trim())) {
+                filas[i].remove();
+                totalForms.value = parseInt(totalForms.value, 10) - 1;
+            } else {
+                break;
+            }
+        }
+    })();
+
+    // Al volver de un error de validacion, cada fila ya trae su producto elegido.
+    contenedorProductos.querySelectorAll('.fila-producto').forEach(function (fila) {
+        var select = fila.querySelector('.select-producto-real');
+        var producto = select && productosPorId[select.value];
+        if (producto) {
+            fila.querySelector('.nombre-producto').value = producto.nombre;
+        }
+    });
+
+    recalcularTotales();
+    buscadorGlobal.focus();
 })();
 </script>
 {% endblock %}

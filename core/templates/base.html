@@ -33,16 +33,37 @@
         .lista-stock-bajo { margin: 12px 0 0; padding-left: 18px; }
         .lista-stock-bajo li { color: var(--tinta); margin-bottom: 4px; }
         .lista-stock-bajo .vacio { list-style: none; margin-left: -18px; color: var(--muted); }
-        .fila-producto { display: grid; grid-template-columns: 1fr 1fr 110px auto; gap: 10px; align-items: end; padding: 16px 0; border-bottom: 1px solid var(--borde); }
+        .fila-producto { display: grid; grid-template-columns: 1fr 110px 130px auto; gap: 10px; align-items: end; padding: 16px 0; border-bottom: 1px solid var(--borde); }
         .fila-producto label { margin: 0 0 4px; font-size: .78rem; }
         .fila-producto input, .fila-producto select { margin: 0; }
-        .fila-producto .quitar-producto { margin: 0; padding: 11px 16px; white-space: nowrap; }
+        .fila-producto .quitar-fila { margin: 0; padding: 11px 16px; white-space: nowrap; }
         .fila-producto input[name$="-DELETE"] { display: none; }
         .fila-producto:first-child { padding-top: 0; }
-        #agregar-producto { margin-top: 16px; }
+        .select-producto-real { display: none; }
+        .fila-producto .nombre-producto { background: #fff0ed; font-weight: 700; border-color: #f5c7c1; cursor: default; }
+        .fila-producto .subtotal { font-size: 1.2rem; margin: 0; padding: 10px 0; }
+        .buscador-global { font-size: 1.05rem; padding: 16px 18px; border-width: 2px; border-color: var(--coral); margin-bottom: 14px; }
+        #sin-productos { margin: 0 0 4px; }
+        .fila-pago { display: grid; grid-template-columns: 1fr auto; gap: 14px; align-items: end; padding: 18px 0; border-bottom: 1px solid var(--borde); }
+        .opciones-pago > div { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; }
+        .opciones-pago label { display: flex; align-items: center; justify-content: center; text-align: center; min-height: 78px; margin: 0; padding: 14px 12px; border: 2px solid var(--borde); border-radius: 14px; background: var(--superficie); font-weight: 700; cursor: pointer; transition: border-color .2s ease, background .2s ease, transform .2s ease; }
+        .opciones-pago label:hover { border-color: var(--coral); transform: translateY(-1px); }
+        .opciones-pago input[type="radio"] { position: absolute; opacity: 0; width: 0; height: 0; }
+        .opciones-pago label:has(input:checked) { border-color: var(--coral); background: #fff0ed; color: var(--coral-oscuro); box-shadow: var(--sombra); }
+        .resumen-pago .analisis { border-left-width: 5px; }
+        .fila-pago input, .fila-pago select { margin: 0; }
+        .fila-pago .quitar-fila { margin: 0; padding: 11px 16px; white-space: nowrap; }
+        .fila-pago input[name$="-DELETE"] { display: none; }
+        .fila-pago:first-child { padding-top: 0; }
+        #agregar-pago { margin-top: 16px; }
+        .resumen-pago { margin-top: 24px; }
+        .resumen-pago label { margin-top: 0; }
+        #vuelto { color: var(--coral); }
+        #falta-efectivo { color: #b94747; font-weight: 700; font-size: .85rem; }
         .acciones-formulario { margin-top: 8px; }
         .acciones-formulario .boton { margin-left: 10px; }
-        @media (max-width: 700px) { .fila-producto { grid-template-columns: 1fr; } }
+        button:disabled, button:disabled:hover { background: var(--borde); color: var(--muted); cursor: not-allowed; transform: none; }
+        @media (max-width: 700px) { .fila-producto { grid-template-columns: 1fr; } .fila-pago { grid-template-columns: 1fr; } }
         .dato { font-family: Georgia, "Times New Roman", serif; font-size: 1.55rem; font-weight: bold; color: var(--tinta); margin: 7px 0; }
         label { display: block; margin: 16px 0 6px; font-weight: 700; color: var(--tinta); }
         input, select { width: 100%; padding: 12px 13px; border: 1px solid var(--borde); border-radius: 10px; background: #fffdfc; color: var(--tinta); font: inherit; }

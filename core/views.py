@@ -1,3 +1,4 @@
+import json
 import sys
 from datetime import date
 from pathlib import Path
@@ -13,8 +14,8 @@ from django.urls import reverse_lazy
 from django.views.generic import CreateView, ListView, UpdateView
 from django.views.generic.base import TemplateView
 
-from .forms import CompraForm, ProductoForm, VentaItemFormSet
-from .models import Compra, Producto, Venta
+from .forms import FormaPagoFormSet, ProductoForm, VentaItemFormSet
+from .models import Compra, FormaPago, Producto, Venta
 
 # solucion.py vive en la raiz del proyecto (junto a manage.py), fuera de core/,
 # asi que se agrega esa carpeta al path para importar decidir_venta sin copiarla.
@@ -72,7 +73,9 @@ class DashboardView(LoginRequiredMixin, TemplateView):
             "unidades_dia_mas_ventas": dia_mas_ventas["unidades_vendidas"] if dia_mas_ventas else 0,
             "producto_mas_vendido": producto_mas_vendido["producto__nombre"] if producto_mas_vendido else None,
             "unidades_producto_mas_vendido": producto_mas_vendido["unidades_vendidas"] if producto_mas_vendido else 0,
-            "ultimas_compras": compras.select_related("vendedor").prefetch_related("ventas__producto")[:5],
+            "ultimas_compras": compras.select_related("vendedor").prefetch_related(
+                "ventas__producto", "formas_pago"
+            )[:5],
         })
         return context
 
@@ -120,24 +123,39 @@ def producto_cambiar_estado(request, pk):
     return render(request, "inventario/confirmar_cambio_estado.html", {"producto": producto})
 
 
+def _productos_disponibles_json():
+    productos = Producto.objects.filter(activo=True, stock__gt=0).order_by("nombre")
+    datos = [
+        {"id": p.pk, "nombre": p.nombre, "precio": p.precio, "codigo_barras": p.codigo_barras or ""}
+        for p in productos
+    ]
+    # Evita que un nombre de producto con "</script>" corte el bloque <script> del template.
+    return json.dumps(datos).replace("</", "<\\/")
+
+
 @login_required
 def registrar_venta(request):
     if request.method == "POST":
-        compra_form = CompraForm(request.POST)
-        formset = VentaItemFormSet(request.POST)
-        if compra_form.is_valid() and formset.is_valid():
+        formset = VentaItemFormSet(request.POST, prefix="form")
+        pago_formset = FormaPagoFormSet(request.POST, prefix="pago")
+        if formset.is_valid() and pago_formset.is_valid():
             items = [
                 form.cleaned_data for form in formset
                 if form.cleaned_data and not form.cleaned_data.get("DELETE")
             ]
+            formas_pago = [
+                form.cleaned_data for form in pago_formset
+                if form.cleaned_data and not form.cleaned_data.get("DELETE")
+            ]
             if not items:
                 messages.error(request, "Agrega al menos un producto a la venta.")
+            elif not formas_pago:
+                messages.error(request, "Agrega al menos una forma de pago.")
             else:
                 error = None
                 with transaction.atomic():
-                    compra = Compra.objects.create(
-                        vendedor=request.user, metodo_pago=compra_form.cleaned_data["metodo_pago"],
-                    )
+                    compra = Compra.objects.create(vendedor=request.user)
+                    total_a_pagar = 0
                     for item in items:
                         producto = Producto.objects.select_for_update().get(pk=item["producto"].pk)
                         cantidad = item["cantidad"]
@@ -153,6 +171,16 @@ def registrar_venta(request):
                         )
                         producto.stock = F("stock") - cantidad
                         producto.save(update_fields=["stock"])
+                        total_a_pagar += resultado["total"]
+                    if not error:
+                        total_pagado = sum(fp["monto"] for fp in formas_pago)
+                        if total_pagado < total_a_pagar:
+                            error = (
+                                f"El pago (${total_pagado}) no cubre el total a pagar (${total_a_pagar})."
+                            )
+                        else:
+                            for fp in formas_pago:
+                                FormaPago.objects.create(compra=compra, tipo=fp["tipo"], monto=fp["monto"])
                     if error:
                         transaction.set_rollback(True)
                 if error:
@@ -161,9 +189,13 @@ def registrar_venta(request):
                     messages.success(request, "Venta registrada y stock actualizado.")
                     return redirect("ventas:lista")
     else:
-        compra_form = CompraForm()
-        formset = VentaItemFormSet()
-    return render(request, "ventas/registrar.html", {"compra_form": compra_form, "formset": formset})
+        formset = VentaItemFormSet(prefix="form")
+        pago_formset = FormaPagoFormSet(prefix="pago")
+    return render(request, "ventas/registrar.html", {
+        "formset": formset,
+        "pago_formset": pago_formset,
+        "productos_json": _productos_disponibles_json(),
+    })
 
 
 class VentaListView(LoginRequiredMixin, ListView):
@@ -172,4 +204,4 @@ class VentaListView(LoginRequiredMixin, ListView):
     context_object_name = "compras"
 
     def get_queryset(self):
-        return Compra.objects.select_related("vendedor").prefetch_related("ventas__producto")
+        return Compra.objects.select_related("vendedor").prefetch_related("ventas__producto", "formas_pago")

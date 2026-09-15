@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from .models import Compra, Producto, Venta
+from .models import Compra, FormaPago, Producto, Venta
 
 
 @admin.register(Producto)
@@ -16,13 +16,18 @@ class VentaInline(admin.TabularInline):
     readonly_fields = ("total",)
 
 
+class FormaPagoInline(admin.TabularInline):
+    model = FormaPago
+    extra = 0
+
+
 @admin.register(Compra)
 class CompraAdmin(admin.ModelAdmin):
-    list_display = ("id", "vendedor", "metodo_pago", "total", "creada_en")
-    list_filter = ("metodo_pago", "creada_en")
+    list_display = ("id", "vendedor", "total", "total_pagado", "creada_en")
+    list_filter = ("creada_en",)
     search_fields = ("vendedor__username",)
     readonly_fields = ("creada_en",)
-    inlines = (VentaInline,)
+    inlines = (VentaInline, FormaPagoInline)
 
 
 @admin.register(Venta)
